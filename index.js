@@ -7,12 +7,13 @@ const app = express();
 app.use(express.json({ limit: '2mb' }));
 app.use(cors());
 
-app.post('/html-to-png', async (req, res) => {
+app.post('/html-to-webp-miniature', async (req, res) => {
   const { html } = req.body;
   if (!html) {
     return res.status(400).json({ error: 'Falta el campo html en el body.' });
   }
   try {
+    console.log("aqui")
     const browser = await puppeteer.launch({ headless: "new", args: ['--no-sandbox', '--disable-setuid-sandbox'] });
     const page = await browser.newPage();
     await page.setViewport({ width: 768, height: 1152 });
@@ -24,6 +25,25 @@ app.post('/html-to-png', async (req, res) => {
     res.send(resized);
   } catch (error) {
     res.status(500).json({ error: 'Error al generar la imagen', details: error.message });
+  }
+});
+
+app.post('/html-to-pdf', async (req, res) => {
+  const { html } = req.body;
+  if (!html) {
+    return res.status(400).json({ error: 'Falta el campo html en el body.' });
+  }
+  try {
+    const browser = await puppeteer.launch({ headless: "new", args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const page = await browser.newPage();
+    await page.setViewport({ width: 768, height: 1152 });
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const buffer = await page.pdf({ format: 'A4' });
+    await browser.close();
+    res.set('Content-Type', 'application/pdf');
+    res.send(buffer);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al generar el PDF', details: error.message });
   }
 });
 
