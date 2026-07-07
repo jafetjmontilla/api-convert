@@ -10,7 +10,7 @@ module.exports = {
       exec_mode: 'fork',
       autorestart: true,
       watch: false,
-      max_memory_restart: '1G',
+      max_memory_restart: '6G',
       kill_timeout: 15_000,
       listen_timeout: 30_000,
       merge_logs: true,
