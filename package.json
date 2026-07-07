@@ -1,15 +1,18 @@
 {
   "name": "api-convert",
-  "version": "1.0.0",
-  "description": "API para convertir HTML a PNG",
+  "version": "2.0.0",
+  "description": "API sync para convertir HTML a WebP y URLs a PDF",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "pm2:start": "mkdir -p logs && pm2 start ecosystem.config.js --env production",
+    "pm2:stop": "pm2 stop api-convert",
+    "pm2:logs": "pm2 logs api-convert"
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
     "express": "^4.18.2",
-    "puppeteer": "^21.3.8",
-    "sharp": "^0.34.2"
+    "puppeteer": "^21.3.8"
   }
 }
