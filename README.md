@@ -43,8 +43,12 @@ Por defecto escucha en `http://localhost:4004`.
 
 ## Producción (PM2)
 
+Definir variables en `.env` (copiar desde `.env.example`). `ecosystem.config.js` solo configura PM2 (`NODE_ENV`, logs, memoria, etc.); la app carga el resto vía `dotenv` al arrancar.
+
 ```bash
 mkdir -p logs
+cp .env.example .env   # si aún no existe
+# Editar .env (CONVERT_TOKEN obligatorio)
 pm2 start ecosystem.config.js --env production
 pm2 save
 ```
@@ -61,7 +65,7 @@ pm2 stop api-convert
 
 ## Variables de entorno
 
-Copiar `.env.example` a `.env` y definir valores reales.
+Copiar `.env.example` a `.env` y definir valores reales. Es la **fuente de verdad** tanto para `yarn start` como para PM2 (`dotenv` al arrancar). Los defaults en `index.js` solo aplican si falta la variable.
 
 | Variable | Default | Descripción |
 |----------|---------|-------------|
@@ -122,6 +126,34 @@ curl -X POST http://localhost:4004/html-to-webp-miniature \
   -H "X-Convert-Token: $CONVERT_TOKEN" \
   -d '{"html":"<html><body><h1>Hola</h1></body></html>"}' \
   --output miniature.webp
+```
+
+### `POST /html-to-pdf`
+
+Renderiza HTML y devuelve un PDF (misma lógica de impresión que `/url-to-pdf`).
+
+**Body (JSON):**
+
+```json
+{
+  "html": "<!DOCTYPE html><html><body><h1>Informe</h1></body></html>",
+  "format": "A4"
+}
+```
+
+| Campo | Requerido | Valores |
+|-------|-----------|---------|
+| `html` | Sí | Documento HTML completo |
+| `format` | No | `A4` (default), `letter`, `legal` |
+
+**Respuesta 200:** binario `application/pdf`
+
+```bash
+curl -X POST http://localhost:4004/html-to-pdf \
+  -H "Content-Type: application/json" \
+  -H "X-Convert-Token: $CONVERT_TOKEN" \
+  -d '{"html":"<!DOCTYPE html><html><body><h1>Informe</h1></body></html>","format":"A4"}' \
+  --output document.pdf
 ```
 
 ### `POST /url-to-pdf`

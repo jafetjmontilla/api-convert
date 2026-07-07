@@ -23,7 +23,7 @@ const BLOCKED_MINIATURE_RESOURCE_TYPES = new Set([
 ]);
 
 const app = express();
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '15mb' }));
 app.use(cors());
 
 let browser = null;
@@ -143,6 +143,24 @@ async function setupPdfPage(page) {
   });
 }
 
+function buildPdfOptions(format) {
+  return {
+    format,
+    printBackground: true,
+    margin: {
+      top: '0.5in',
+      right: '0.5in',
+      bottom: '0.5in',
+      left: '0.5in',
+    },
+    preferCSSPageSize: true,
+  };
+}
+
+async function renderPdfFromPage(page, format) {
+  return page.pdf(buildPdfOptions(format));
+}
+
 function sendError(res, status, message, details) {
   res.status(status).json({
     error: message,
@@ -185,6 +203,7 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/html-to-webp-miniature', validateConvertToken);
+app.use('/html-to-pdf', validateConvertToken);
 app.use('/url-to-pdf', validateConvertToken);
 
 app.post('/html-to-webp-miniature', async (req, res) => {
@@ -217,6 +236,37 @@ app.post('/html-to-webp-miniature', async (req, res) => {
   }
 });
 
+app.post('/html-to-pdf', async (req, res) => {
+  const { html, format = 'A4' } = req.body;
+
+  if (!html || typeof html !== 'string') {
+    return sendError(res, 400, 'Falta el campo html en el body.');
+  }
+
+  if (!VALID_PDF_FORMATS.includes(format)) {
+    return sendError(res, 400, 'Formato no válido. Use: letter, A4, u legal.');
+  }
+
+  try {
+    const buffer = await withConcurrency(() =>
+      withPage(setupPdfPage, async (page) => {
+        await page.setContent(html, { waitUntil: "networkidle0" });
+        return renderPdfFromPage(page, format);
+      }),
+    );
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Length': String(buffer.length),
+      'Cache-Control': 'no-store',
+    });
+    res.send(buffer);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Error desconocido';
+    sendError(res, 500, 'Error al generar el PDF', message);
+  }
+});
+
 app.post('/url-to-pdf', async (req, res) => {
   const { url, format = 'A4' } = req.body;
 
@@ -241,17 +291,7 @@ app.post('/url-to-pdf', async (req, res) => {
     const buffer = await withConcurrency(() =>
       withPage(setupPdfPage, async (page) => {
         await page.goto(url, { waitUntil: 'networkidle2' });
-        return page.pdf({
-          format,
-          printBackground: true,
-          margin: {
-            top: '0.5in',
-            right: '0.5in',
-            bottom: '0.5in',
-            left: '0.5in',
-          },
-          preferCSSPageSize: true,
-        });
+        return renderPdfFromPage(page, format);
       }),
     );
 

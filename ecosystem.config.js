@@ -19,17 +19,9 @@ module.exports = {
       error_file: path.join(__dirname, 'logs', 'pm2-error.log'),
       env: {
         NODE_ENV: 'development',
-        PORT: 4004,
-        CONCURRENCY: 3,
-        NAVIGATION_TIMEOUT_MS: 30_000,
-        WEBP_QUALITY: 80,
       },
       env_production: {
         NODE_ENV: 'production',
-        PORT: 4004,
-        CONCURRENCY: 3,
-        NAVIGATION_TIMEOUT_MS: 30_000,
-        WEBP_QUALITY: 80,
       },
     },
   ],
