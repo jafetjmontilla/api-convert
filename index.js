@@ -251,6 +251,14 @@ app.post('/html-to-pdf', async (req, res) => {
     const buffer = await withConcurrency(() =>
       withPage(setupPdfPage, async (page) => {
         await page.setContent(html, { waitUntil: "networkidle0" });
+        // Esperar tipografías (Google Fonts / @font-face) antes de imprimir.
+        await page.evaluate(async () => {
+          if (document.fonts?.ready) {
+            await document.fonts.ready;
+          }
+        });
+        // Pequeña holgura por si el CSS de fuentes llega tarde.
+        await new Promise((resolve) => setTimeout(resolve, 300));
         return renderPdfFromPage(page, format);
       }),
     );
