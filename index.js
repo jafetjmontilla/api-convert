@@ -202,9 +202,29 @@ app.get('/health', (_req, res) => {
   });
 });
 
+const PNG_MIN_SIZE = 64;
+const PNG_MAX_SIZE = 2000;
+
+function asPngDimension(value, fallback) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < PNG_MIN_SIZE || parsed > PNG_MAX_SIZE) {
+    return fallback;
+  }
+  return parsed;
+}
+
+async function setupPngPage(page, width, height) {
+  await page.setViewport({
+    width,
+    height,
+    deviceScaleFactor: 2,
+  });
+}
+
 app.use('/html-to-webp-miniature', validateConvertToken);
+app.use('/html-to-png', validateConvertToken);
 app.use('/html-to-pdf', validateConvertToken);
-app.use('/url-to-pdf', validateConvertToken);
+// /url-to-pdf: token opcional (pasa sin X-Convert-Token)
 
 app.post('/html-to-webp-miniature', async (req, res) => {
   const { html } = req.body;
@@ -226,6 +246,42 @@ app.post('/html-to-webp-miniature', async (req, res) => {
 
     res.set({
       'Content-Type': 'image/webp',
+      'Content-Length': String(buffer.length),
+      'Cache-Control': 'no-store',
+    });
+    res.send(buffer);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Error desconocido';
+    sendError(res, 500, 'Error al generar la imagen', message);
+  }
+});
+
+app.post('/html-to-png', async (req, res) => {
+  const { html } = req.body;
+  if (!html || typeof html !== 'string') {
+    return sendError(res, 400, 'Falta el campo html en el body.');
+  }
+
+  const width = asPngDimension(req.body.width, 512);
+  const height = asPngDimension(req.body.height, 512);
+
+  try {
+    const buffer = await withConcurrency(() =>
+      withPage(
+        (page) => setupPngPage(page, width, height),
+        async (page) => {
+          await page.setContent(html, { waitUntil: 'domcontentloaded' });
+          return page.screenshot({
+            type: 'png',
+            fullPage: false,
+            omitBackground: false,
+          });
+        },
+      ),
+    );
+
+    res.set({
+      'Content-Type': 'image/png',
       'Content-Length': String(buffer.length),
       'Cache-Control': 'no-store',
     });

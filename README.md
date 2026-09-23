@@ -3,6 +3,7 @@
 Microservicio HTTP independiente para conversión síncrona de documentos:
 
 - **HTML → miniatura WebP** (180×270 px)
+- **HTML → PNG** (captura rectangular, p. ej. QR para WhatsApp)
 - **URL → PDF** (formatos `A4`, `letter`, `legal`)
 
 No persiste archivos ni usa caché: cada petición devuelve el binario generado en la misma respuesta.
@@ -126,6 +127,36 @@ curl -X POST http://localhost:4004/html-to-webp-miniature \
   -H "X-Convert-Token: $CONVERT_TOKEN" \
   -d '{"html":"<html><body><h1>Hola</h1></body></html>"}' \
   --output miniature.webp
+```
+
+### `POST /html-to-png`
+
+Renderiza HTML y devuelve una captura PNG. WhatsApp Cloud API acepta `image/png` o `image/jpeg`, no SVG.
+
+**Body (JSON):**
+
+```json
+{
+  "html": "<html><body><div>QR</div></body></html>",
+  "width": 512,
+  "height": 512
+}
+```
+
+| Campo | Requerido | Valores |
+|-------|-----------|---------|
+| `html` | Sí | Documento HTML |
+| `width` | No | Entero 64–2000 (default `512`) |
+| `height` | No | Entero 64–2000 (default `512`) |
+
+**Respuesta 200:** binario `image/png`
+
+```bash
+curl -X POST http://localhost:4004/html-to-png \
+  -H "Content-Type: application/json" \
+  -H "X-Convert-Token: $CONVERT_TOKEN" \
+  -d '{"html":"<html><body style=\"margin:0;background:#fff\"><h1>QR</h1></body></html>","width":512,"height":512}' \
+  --output qr.png
 ```
 
 ### `POST /html-to-pdf`
